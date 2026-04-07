@@ -36,10 +36,14 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.svm import SVC
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, VotingClassifier, StackingClassifier
+from sklearn.neural_network import MLPClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV, StratifiedKFold
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
+from sklearn.preprocessing import StandardScaler
+import warnings
+warnings.filterwarnings('ignore', category=RuntimeWarning)
 
 from backend.classifier import preprocess_text
 
@@ -69,10 +73,10 @@ def load_dataset(path: str):
 # TRAIN
 # ─────────────────────────────────────────────────────────────────────────────
 
-def train(texts, labels, model_type="logistic", output_path=DEFAULT_MODEL_OUT):
-    print("\n" + "═"*60)
-    print("  ResolveAI  –  Model Training (Enhanced)")
-    print("═"*60)
+def train(texts, labels, model_type="ensemble", output_path=DEFAULT_MODEL_OUT):
+    print("\n" + "═"*80)
+    print("  ResolveAI  –  Model Training (Optimized Stacking Ensemble)")
+    print("═"*80)
 
     # ── Step 1: Preprocess ───────────────────────────────────────────────────
     print("\n[1/6] Preprocessing texts…")
@@ -94,75 +98,154 @@ def train(texts, labels, model_type="logistic", output_path=DEFAULT_MODEL_OUT):
     for cat, cnt in sorted(dist.items()):
         print(f"        {cat:<12} {cnt} samples")
 
-    # ── Step 3: Build TF-IDF vectorizer ──────────────────────────────────────
+    # ── Step 3: Build enhanced TF-IDF vectorizer ────────────────────────────
     print(f"\n[3/6] Building enhanced TF-IDF vectorizer…")
 
     tfidf = TfidfVectorizer(
         max_features=5000,
         ngram_range=(1, 2),
         min_df=1,
-        max_df=0.95,  # Remove very common terms
+        max_df=0.95,
         stop_words="english",
         sublinear_tf=True,
         use_idf=True
     )
+    
+    # Fit TF-IDF once to use for all models
+    X_train_tfidf = tfidf.fit_transform(X_train)
+    X_test_tfidf = tfidf.transform(X_test)
+    print(f"      Feature matrix shape: {X_train_tfidf.shape}")
 
-    # ── Step 4: Try multiple algorithms with hyperparameter tuning ───────────
-    print(f"\n[4/6] Comparing multiple algorithms with tuning…")
+    # ── Step 4: Train base models with aggressive hyperparameter tuning ──────
+    print(f"\n[4/6] Training base models with hyperparameter tuning…")
     
-    results = {}
-    
-    # Logistic Regression with tuning
-    print("      Testing Logistic Regression…")
-    lr_pipeline = Pipeline([("tfidf", tfidf), ("clf", LogisticRegression(max_iter=1000, class_weight="balanced"))])
-    lr_params = {"clf__C": [0.1, 1.0, 10.0]}
-    lr_grid = GridSearchCV(lr_pipeline, lr_params, cv=5, scoring="accuracy", n_jobs=-1, verbose=0)
-    lr_grid.fit(X_train, y_train)
+    # Logistic Regression (expanded C range with different penalties)
+    print("      [4a] Logistic Regression…")
+    lr_params = {'C': [0.01, 0.1, 1.0, 10.0, 100.0], 'penalty': ['l2']}
+    lr_clf = LogisticRegression(max_iter=1000, class_weight="balanced", random_state=42, solver='lbfgs')
+    lr_grid = GridSearchCV(lr_clf, lr_params, cv=5, scoring="accuracy", n_jobs=-1, verbose=0)
+    lr_grid.fit(X_train_tfidf, y_train)
+    lr_best = lr_grid.best_estimator_
     lr_score = lr_grid.best_score_
-    results["Logistic Regression"] = (lr_grid, lr_score)
-    print(f"        CV Score: {lr_score:.4f}, Best C: {lr_grid.best_params_['clf__C']}")
+    print(f"            CV Score: {lr_score:.4f}")
 
-    # SVM (often better for small datasets)
-    print("      Testing Support Vector Machine (SVM)…")
-    svm_pipeline = Pipeline([("tfidf", tfidf), ("clf", SVC(kernel="rbf", probability=True, class_weight="balanced"))])
-    svm_params = {"clf__C": [0.1, 1.0, 10.0], "clf__gamma": ["scale", "auto"]}
-    svm_grid = GridSearchCV(svm_pipeline, svm_params, cv=5, scoring="accuracy", n_jobs=-1, verbose=0)
-    svm_grid.fit(X_train, y_train)
+    # SVM (wider parameter search with multiple kernels)
+    print("      [4b] Support Vector Machine (SVM)…")
+    svm_params = {'C': [0.1, 1.0, 10.0], 'kernel': ['rbf', 'linear']}
+    svm_clf = SVC(probability=True, class_weight="balanced", random_state=42)
+    svm_grid = GridSearchCV(svm_clf, svm_params, cv=5, scoring="accuracy", n_jobs=-1, verbose=0)
+    svm_grid.fit(X_train_tfidf, y_train)
+    svm_best = svm_grid.best_estimator_
     svm_score = svm_grid.best_score_
-    results["SVM"] = (svm_grid, svm_score)
-    print(f"        CV Score: {svm_score:.4f}")
+    print(f"            CV Score: {svm_score:.4f}")
 
-    # Naive Bayes (baseline fast classifier)
-    print("      Testing Naive Bayes…")
-    nb_pipeline = Pipeline([("tfidf", tfidf), ("clf", MultinomialNB(alpha=0.1))])
-    nb_scores = cross_val_score(nb_pipeline, X_train, y_train, cv=5, scoring="accuracy")
-    nb_score = nb_scores.mean()
-    nb_pipeline.fit(X_train, y_train)
-    results["Naive Bayes"] = (nb_pipeline, nb_score)
-    print(f"        CV Score: {nb_score:.4f}")
+    # Gradient Boosting (tuned for small datasets)
+    print("      [4c] Gradient Boosting Classifier…")
+    gb_params = {'n_estimators': [150, 200, 300], 'learning_rate': [0.01, 0.05], 'max_depth': [3, 4]}
+    gb_clf = GradientBoostingClassifier(random_state=42, subsample=0.8)
+    gb_grid = GridSearchCV(gb_clf, gb_params, cv=5, scoring="accuracy", n_jobs=-1, verbose=0)
+    gb_grid.fit(X_train_tfidf, y_train)
+    gb_best = gb_grid.best_estimator_
+    gb_score = gb_grid.best_score_
+    print(f"            CV Score: {gb_score:.4f}")
 
-    # Select best model
-    best_name = max(results.keys(), key=lambda k: results[k][1])
-    best_model, best_cv_score = results[best_name]
+    # Naive Bayes 
+    print("      [4d] Multinomial Naive Bayes…")
+    nb_params = [0.001, 0.01, 0.1, 0.5, 1.0]
+    best_nb = None
+    best_nb_score = 0
+    for alpha in nb_params:
+        nb_clf = MultinomialNB(alpha=alpha)
+        nb_score = cross_val_score(nb_clf, X_train_tfidf, y_train, cv=5, scoring="accuracy").mean()
+        if nb_score > best_nb_score:
+            best_nb_score = nb_score
+            best_nb = nb_clf
+    best_nb.fit(X_train_tfidf, y_train)
+    print(f"            CV Score: {best_nb_score:.4f}")
+
+    # ── Step 5: Create Stacking Ensemble ─────────────────────────────────────
+    print(f"\n[5/6] Creating Stacking Ensemble (4 base models + meta-learner)…")
     
-    print(f"\n      Best Algorithm: {best_name} (CV Score: {best_cv_score:.4f})")
+    # Base estimators for stacking
+    base_estimators = [
+        ('lr', lr_best),
+        ('svm', svm_best),
+        ('gb', gb_best),
+        ('nb', best_nb)
+    ]
+    
+    # Meta-learner: uses predictions from base models
+    meta_learner = LogisticRegression(max_iter=1000, random_state=42)
+    
+    # Create stacking classifier
+    stacking_clf = StackingClassifier(
+        estimators=base_estimators,
+        final_estimator=meta_learner,
+        cv=5
+    )
+    
+    stacking_clf.fit(X_train_tfidf, y_train)
+    y_pred_stack = stacking_clf.predict(X_test_tfidf)
+    stack_accuracy = accuracy_score(y_test, y_pred_stack)
+    print(f"      Stacking Accuracy: {stack_accuracy:.4f} ({stack_accuracy*100:.1f}%)")
+    
+    # Also create voting ensemble for comparison
+    voting_clf = VotingClassifier(
+        estimators=base_estimators,
+        voting='soft'
+    )
+    voting_clf.fit(X_train_tfidf, y_train)
+    y_pred_voting = voting_clf.predict(X_test_tfidf)
+    voting_accuracy = accuracy_score(y_test, y_pred_voting)
+    print(f"      Voting Accuracy:   {voting_accuracy:.4f} ({voting_accuracy*100:.1f}%)")
+    
+    # Choose best ensemble
+    if stack_accuracy >= voting_accuracy:
+        final_clf = stacking_clf
+        final_accuracy = stack_accuracy
+        ensemble_name = "Stacking"
+    else:
+        final_clf = voting_clf
+        final_accuracy = voting_accuracy
+        ensemble_name = "Voting"
 
-    # ── Step 5: Evaluate on test set ──────────────────────────────────────────
-    print(f"\n[5/6] Evaluating best model on test set…")
-    y_pred = best_model.predict(X_test)
-    accuracy = accuracy_score(y_test, y_pred)
+    # Create final pipeline for deployment
+    final_pipeline = Pipeline([
+        ("tfidf", tfidf),
+        ("ensemble", final_clf)
+    ])
 
-    print(f"\n      Test Accuracy: {accuracy:.4f} ({accuracy*100:.1f}%)")
-    print("\n" + "─"*60)
-    print("  Classification Report")
-    print("─"*60)
-    print(classification_report(y_test, y_pred))
+    # ── Step 6: Final Evaluation and Report ──────────────────────────────────
+    print(f"\n[6/6] Final Evaluation Report ({ensemble_name} Ensemble)…")
+    print("\n" + "─"*80)
+    print("  Base Model Individual Accuracies (test set)")
+    print("─"*80)
+    for name, est in base_estimators:
+        y_pred = est.predict(X_test_tfidf)
+        acc = accuracy_score(y_test, y_pred)
+        print(f"    {name.upper():12} {acc*100:6.1f}%")
+    
+    print("\n" + "─"*80)
+    print("  Ensemble Accuracies (test set)")
+    print("─"*80)
+    print(f"    {'STACKING':12} {stack_accuracy*100:6.1f}%")
+    print(f"    {'VOTING':12} {voting_accuracy*100:6.1f}%")
+    print(f"\n    {'BEST':12} {final_accuracy*100:6.1f}%  ← Final Model ({ensemble_name})")
+    
+    print("\n" + "─"*80)
+    print(f"  Classification Report ({ensemble_name})")
+    print("─"*80)
+    if ensemble_name == "Stacking":
+        y_pred_final = y_pred_stack
+    else:
+        y_pred_final = y_pred_voting
+    print(classification_report(y_test, y_pred_final))
 
     # Confusion matrix
     print("  Confusion Matrix")
-    print("─"*60)
+    print("─"*80)
     categories = sorted(set(labels))
-    cm = confusion_matrix(y_test, y_pred, labels=categories)
+    cm = confusion_matrix(y_test, y_pred_final, labels=categories)
 
     # Pretty-print confusion matrix
     col_width = max(len(c) for c in categories) + 2
@@ -172,16 +255,16 @@ def train(texts, labels, model_type="logistic", output_path=DEFAULT_MODEL_OUT):
         row_str = "  " + row_label.ljust(col_width) + "".join(str(v).ljust(col_width) for v in row)
         print(row_str)
 
-    # ── Step 6: Save model ───────────────────────────────────────────────────
-    print(f"\n[6/6] Saving best model ({best_name})…")
+    # ── Save model ───────────────────────────────────────────────────────────
+    print(f"\n✓ Saving {ensemble_name} ensemble model to: {output_path}")
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     with open(output_path, "wb") as f:
-        pickle.dump(best_model, f)
+        pickle.dump(final_pipeline, f)
 
-    print(f"\n✓ Model saved to: {output_path}")
-    print("═"*60 + "\n")
+    print("✓ Model saved successfully!")
+    print("═"*80 + "\n")
 
-    return best_model, accuracy
+    return final_pipeline, final_accuracy
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -269,5 +269,5 @@ def resolve_ticket():
 
 # ─────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    logger.info("Starting ResolveAI backend on http://localhost:5000")
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    logger.info("Starting ResolveAI backend on http://localhost:5001")
+    app.run(debug=True, host="0.0.0.0", port=5001)
