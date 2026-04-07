@@ -17,7 +17,18 @@ from datetime import datetime
 from typing import List, Optional, Dict
 import bcrypt
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "resolveai.db")
+# Database configuration - supports both SQLite (dev) and PostgreSQL (prod)
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+if DATABASE_URL:
+    # Production: PostgreSQL
+    import psycopg2
+    import psycopg2.extras
+    DB_TYPE = 'postgresql'
+else:
+    # Development: SQLite
+    DB_TYPE = 'sqlite'
+    DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "resolveai.db")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -90,11 +101,16 @@ def init_db():
     conn.close()
 
 
-def get_connection() -> sqlite3.Connection:
-    """Return a configured SQLite connection."""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+def get_connection():
+    """Return a configured database connection (SQLite or PostgreSQL)."""
+    if DB_TYPE == 'postgresql':
+        conn = psycopg2.connect(DATABASE_URL)
+        return conn
+    else:
+        # SQLite
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        return conn
 
 
 # ─────────────────────────────────────────────────────────────────────────────

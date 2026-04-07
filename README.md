@@ -248,7 +248,56 @@ python -c "from backend.database import init_db; init_db()"
 
 ## 🚀 Production Deployment
 
-### 1. Environment Setup
+### Quick Deploy to Render (Recommended)
+
+#### Step-by-Step Render Deployment:
+
+1. **Create Render Account**
+   - Go to [render.com](https://render.com) and sign up
+   - Connect your GitHub account
+
+2. **Create PostgreSQL Database**
+   - Click "New" → "PostgreSQL"
+   - Choose "Free" plan
+   - Name: `resolveai-db`
+   - Note the connection string for later
+
+3. **Create Web Service**
+   - Click "New" → "Web Service"
+   - Connect your `Manasj06/resolveai` repository
+   - Configure service:
+     ```
+     Name: resolveai-backend
+     Environment: Python 3
+     Build Command: pip install -r requirements.txt && python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); nltk.download('wordnet')"
+     Start Command: gunicorn backend.app:app --bind 0.0.0.0:$PORT
+     ```
+
+4. **Set Environment Variables**
+   ```
+   SECRET_KEY: your-secure-random-key-here (generate with: openssl rand -hex 32)
+   FLASK_ENV: production
+   ```
+
+5. **Deploy**
+   - Click "Create Web Service"
+   - Wait for deployment (~5-10 minutes)
+   - Your API will be live at: `https://resolveai-backend.onrender.com`
+
+6. **Access Your App**
+   - Frontend: Open the web service URL in browser
+   - API endpoints work at the same URL
+   - Full app with authentication ready!
+
+#### Why Render?
+- ✅ **Free tier** available (750 hours/month)
+- ✅ **PostgreSQL database** included
+- ✅ **Automatic SSL** certificates
+- ✅ **GitHub integration** - auto-deploys on push
+- ✅ **Python support** with ML libraries
+- ✅ **Persistent storage** for database and models
+
+### Alternative: Manual Server Setup
 ```bash
 # Set production environment
 export SECRET_KEY="$(openssl rand -hex 32)"
