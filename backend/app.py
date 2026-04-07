@@ -52,6 +52,10 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
+@login_manager.unauthorized_handler
+def unauthorized_callback():
+    return jsonify({"error": "Authentication required"}), 401
+
 class User(UserMixin):
     def __init__(self, user_id, email):
         self.id = user_id
