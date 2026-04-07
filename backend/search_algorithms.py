@@ -183,7 +183,7 @@ class AStarResponseSelector:
 # CONFIDENCE THRESHOLD LOGIC
 # ─────────────────────────────────────────────────────────────────────────────
 
-CONFIDENCE_THRESHOLD = 0.55  # Below this → create a support ticket
+CONFIDENCE_THRESHOLD = 0.35  # Below this → create a support ticket; at/above → auto-resolve
 
 def should_auto_resolve(confidence: float) -> bool:
     """Return True if confidence is high enough for auto-resolution."""
