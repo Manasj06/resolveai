@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ResolveAI – Intelligent Complaint Resolution</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0e1a;
+    --bg2: #111827;
+    --bg3: #1a2235;
+    --bg4: #1e2d45;
+    --surface: #162032;
+    --surface2: #1e2d45;
+    --border: rgba(99,180,255,0.12);
+    --border2: rgba(99,180,255,0.22);
+    --accent: #3b9eff;
+    --accent2: #60cfff;
+    --accent-glow: rgba(59,158,255,0.18);
+    --green: #22d3a0;
+    --green-bg: rgba(34,211,160,0.1);
+    --amber: #f59e0b;
+    --amber-bg: rgba(245,158,11,0.1);
+    --red: #f87171;
+    --red-bg: rgba(248,113,113,0.1);
+    --purple: #a78bfa;
+    --purple-bg: rgba(167,139,250,0.1);
+    --text: #e2e8f0;
+    --text2: #94a3b8;
+    --text3: #64748b;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Sora', sans-serif;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --radius-lg: 16px;
+  }
+
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  /* ── LAYOUT ─────────────────────────────────────────────────── */
+  .shell {
+    display: grid;
+    grid-template-columns: 240px 1fr 320px;
+    grid-template-rows: 60px 1fr;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── TOPBAR ─────────────────────────────────────────────────── */
+  .topbar {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    gap: 16px;
+    z-index: 10;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700; letter-spacing: -0.5px; }
+  .logo-icon {
+    width: 30px; height: 30px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .logo-text span { color: var(--accent); }
+  .topbar-sep { flex: 1; }
+  .status-pill {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 12px; color: var(--text2);
+  }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .dot-green { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
+  .dot-amber { background: var(--amber); }
+  .dot-red { background: var(--red); }
+
+  @keyframes pulse {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .train-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 16px;
+    background: linear-gradient(135deg, var(--accent), #2980d4);
+    border: none; border-radius: var(--radius-sm);
+    color: #fff; font-family: var(--sans); font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .train-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(59,158,255,0.35); }
+  .train-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* ── SIDEBAR ─────────────────────────────────────────────────── */
+  .sidebar {
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    padding: 20px 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .sidebar-section-title {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 12px;
+  }
+
+  /* ── NAV ─────────────────────────────────────────────────────── */
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 13px; color: var(--text2);
+    cursor: pointer; transition: all 0.15s;
+    border: 1px solid transparent;
+  }
+  .nav-item:hover { background: var(--surface); color: var(--text); }
+  .nav-item.active {
+    background: var(--accent-glow);
+    border-color: rgba(59,158,255,0.3);
+    color: var(--accent2);
+  }
+  .nav-icon { font-size: 15px; width: 20px; text-align: center; }
+
+  /* ── STAT CARDS (sidebar) ────────────────────────────────────── */
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+  }
+  .stat-card-label { font-size: 11px; color: var(--text3); margin-bottom: 4px; }
+  .stat-card-value { font-size: 24px; font-weight: 700; color: var(--text); font-family: var(--mono); }
+  .stat-card-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  .cat-bar { margin-top: 8px; }
+  .cat-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .cat-bar-label { font-size: 11px; color: var(--text2); width: 60px; flex-shrink: 0; }
+  .cat-bar-track { flex: 1; height: 4px; background: var(--bg4); border-radius: 2px; overflow: hidden; }
+  .cat-bar-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+  .cat-bar-count { font-size: 11px; color: var(--text3); font-family: var(--mono); width: 20px; text-align: right; }
+
+  /* ── MAIN PANEL ──────────────────────────────────────────────── */
+  .main {
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* ── VIEWS ───────────────────────────────────────────────────── */
+  .view { display: none; flex-direction: column; gap: 20px; }
+  .view.active { display: flex; }
+
+  /* ── COMPLAINT INPUT ─────────────────────────────────────────── */
+  .input-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+  }
+  .input-card-title {
+    font-size: 16px; font-weight: 600;
+    margin-bottom: 6px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .input-card-sub { font-size: 13px; color: var(--text2); margin-bottom: 16px; }
+
+  .complaint-textarea {
+    width: 100%;
+    min-height: 120px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .complaint-textarea:focus { border-color: var(--accent); }
+  .complaint-textarea::placeholder { color: var(--text3); }
+
+  .input-actions { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+  .char-count { font-size: 12px; color: var(--text3); font-family: var(--mono); }
+
+  .submit-btn {
+    margin-left: auto;
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 24px;
+    background: linear-gradient(135deg, var(--accent), #2563eb);
+    border: none; border-radius: var(--radius);
+    color: #fff; font-family: var(--sans); font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .submit-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(59,158,255,0.4); }
+  .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  /* ── QUICK EXAMPLES ──────────────────────────────────────────── */
+  .examples-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .example-chip {
+    padding: 5px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 12px; color: var(--text2);
+    cursor: pointer; transition: all 0.15s;
+  }
+  .example-chip:hover { border-color: var(--accent); color: var(--accent2); }
+
+  /* ── AI ANALYZING ANIMATION ──────────────────────────────────── */
+  .analyzing-card {
+    background: var(--bg2);
+    border: 1px solid rgba(59,158,255,0.3);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    text-align: center;
+  }
+  .analyzing-card.visible { display: flex; }
+
+  .spinner-ring {
+    width: 56px; height: 56px;
+    border: 3px solid var(--surface2);
+    border-top-color: var(--accent);
+    border-right-color: var(--accent2);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .analyzing-steps { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 320px; }
+  .analyzing-step {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 14px;
+    background: var(--surface);
+    border-radius: var(--radius-sm);
+    font-size: 13px; color: var(--text3);
+    transition: all 0.3s;
+  }
+  .analyzing-step.done { color: var(--green); background: var(--green-bg); }
+  .analyzing-step.active { color: var(--accent2); background: var(--accent-glow); }
+  .step-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+  /* ── RESULT CARD ─────────────────────────────────────────────── */
+  .result-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  .result-header {
+    padding: 16px 20px;
+    display: flex; align-items: center; gap: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .result-header.resolved { background: var(--green-bg); border-color: rgba(34,211,160,0.2); }
+  .result-header.ticket { background: var(--amber-bg); border-color: rgba(245,158,11,0.2); }
+
+  .result-icon { font-size: 22px; }
+  .result-title { font-size: 15px; font-weight: 600; }
+  .result-subtitle { font-size: 12px; color: var(--text2); }
+  .result-badge {
+    margin-left: auto;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px; font-weight: 600;
+    font-family: var(--mono);
+  }
+  .badge-green { background: var(--green-bg); color: var(--green); border: 1px solid rgba(34,211,160,0.3); }
+  .badge-amber { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
+  .badge-blue { background: var(--accent-glow); color: var(--accent2); border: 1px solid rgba(59,158,255,0.3); }
+  .badge-purple { background: var(--purple-bg); color: var(--purple); border: 1px solid rgba(167,139,250,0.3); }
+
+  .result-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+
+  /* ── CHAT BUBBLE ─────────────────────────────────────────────── */
+  .chat-bubble {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0 var(--radius) var(--radius) var(--radius);
+    padding: 14px 16px;
+    font-size: 14px; color: var(--text);
+    line-height: 1.7;
+    position: relative;
+  }
+  .chat-bubble::before {
+    content: "🤖 AI Resolution";
+    display: block;
+    font-size: 11px; color: var(--accent2); font-weight: 600;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+  }
+
+  .ticket-bubble {
+    background: var(--amber-bg);
+    border: 1px solid rgba(245,158,11,0.25);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .ticket-bubble-title { font-size: 13px; font-weight: 600; color: var(--amber); margin-bottom: 8px; }
+  .ticket-id { font-family: var(--mono); font-size: 16px; color: var(--text); font-weight: 700; }
+  .ticket-meta { font-size: 12px; color: var(--text2); margin-top: 4px; }
+
+  /* ── GRID 2 ──────────────────────────────────────────────────── */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* ── INFO ROW ────────────────────────────────────────────────── */
+  .info-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+  }
+  .info-box-label { font-size: 11px; color: var(--text3); margin-bottom: 4px; }
+  .info-box-value { font-size: 14px; font-weight: 600; color: var(--text); font-family: var(--mono); }
+
+  /* ── PROBABILITY BARS ────────────────────────────────────────── */
+  .prob-bars { display: flex; flex-direction: column; gap: 8px; }
+  .prob-row { display: flex; align-items: center; gap: 10px; }
+  .prob-label { font-size: 12px; color: var(--text2); width: 70px; }
+  .prob-track { flex: 1; height: 8px; background: var(--bg4); border-radius: 4px; overflow: hidden; }
+  .prob-fill { height: 100%; border-radius: 4px; transition: width 0.8s ease; }
+  .prob-value { font-size: 12px; font-family: var(--mono); color: var(--text3); width: 42px; text-align: right; }
+
+  /* ── ALGORITHM LOGS ──────────────────────────────────────────── */
+  .algo-section { display: flex; flex-direction: column; gap: 8px; }
+  .algo-title { font-size: 12px; font-weight: 600; color: var(--text2); display: flex; align-items: center; gap: 6px; }
+
+  .bfs-nodes { display: flex; flex-wrap: wrap; gap: 6px; }
+  .bfs-node {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    border: 1px solid;
+    font-family: var(--mono);
+    transition: all 0.3s;
+  }
+  .bfs-node.best { background: var(--green-bg); border-color: rgba(34,211,160,0.4); color: var(--green); }
+  .bfs-node.explored { background: var(--surface); border-color: var(--border); color: var(--text3); }
+
+  .astar-table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: var(--mono); }
+  .astar-table th {
+    text-align: left; padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text3); font-weight: 500;
+    background: var(--surface);
+  }
+  .astar-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); color: var(--text2); }
+  .astar-table tr.best-row td { color: var(--green); background: var(--green-bg); }
+  .astar-table tr:hover td { background: var(--surface); }
+
+  /* ── PREPROCESSED TEXT ───────────────────────────────────────── */
+  .preproc-box {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text3);
+    word-break: break-word;
+  }
+  .preproc-label { font-size: 11px; color: var(--text3); margin-bottom: 6px; }
+
+  /* ── RIGHT PANEL ─────────────────────────────────────────────── */
+  .right-panel {
+    background: var(--bg2);
+    border-left: 1px solid var(--border);
+    padding: 20px 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* ── HISTORY ─────────────────────────────────────────────────── */
+  .history-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-bottom: 8px;
+  }
+  .history-item:hover { border-color: var(--border2); }
+  .history-item-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .history-item-text { font-size: 12px; color: var(--text2); line-height: 1.5; }
+  .history-item-meta { font-size: 11px; color: var(--text3); margin-top: 4px; font-family: var(--mono); }
+
+  /* ── TICKETS VIEW ────────────────────────────────────────────── */
+  .ticket-card {
+    background: var(--surface);
+    border: 1px solid rgba(245,158,11,0.2);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+  .ticket-card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .ticket-card-id { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--amber); }
+  .ticket-card-text { font-size: 13px; color: var(--text2); line-height: 1.5; }
+  .ticket-card-meta { font-size: 11px; color: var(--text3); margin-top: 8px; display: flex; gap: 12px; font-family: var(--mono); }
+
+  /* ── ANALYTICS VIEW ──────────────────────────────────────────── */
+  .analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .analytics-cat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    text-align: center;
+  }
+  .analytics-cat-name { font-size: 13px; color: var(--text2); margin-bottom: 6px; }
+  .analytics-cat-count { font-size: 32px; font-weight: 700; font-family: var(--mono); }
+  .analytics-cat-meta { font-size: 11px; color: var(--text3); margin-top: 4px; }
+  .analytics-mini-bar { height: 3px; border-radius: 2px; margin-top: 8px; }
+
+  /* ── TOAST ───────────────────────────────────────────────────── */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 12px 18px;
+    font-size: 13px;
+    display: flex; align-items: center; gap: 10px;
+    z-index: 9999;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s;
+    max-width: 340px;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* ── EMPTY STATE ─────────────────────────────────────────────── */
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 48px 24px; text-align: center; gap: 12px;
+    color: var(--text3);
+  }
+  .empty-state-icon { font-size: 36px; }
+  .empty-state-title { font-size: 15px; font-weight: 600; color: var(--text2); }
+
+  /* ── SECTION HEADING ─────────────────────────────────────────── */
+  .section-heading {
+    font-size: 18px; font-weight: 700; color: var(--text);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-sub { font-size: 13px; color: var(--text2); }
+
+  /* ── COLLAPSIBLE ─────────────────────────────────────────────── */
+  .collapsible-header {
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; user-select: none;
+    padding: 10px 0;
+    border-top: 1px solid var(--border);
+  }
+  .collapsible-header-label { font-size: 12px; font-weight: 600; color: var(--text2); display: flex; align-items: center; gap: 6px; }
+  .collapsible-arrow { font-size: 10px; color: var(--text3); transition: transform 0.2s; }
+  .collapsible-arrow.open { transform: rotate(180deg); }
+  .collapsible-content { display: none; padding-top: 10px; }
+  .collapsible-content.open { display: block; }
+
+  /* ── RESPONSIVE ──────────────────────────────────────────────── */
+  @media (max-width: 900px) {
+    .shell { grid-template-columns: 1fr; grid-template-rows: 60px 1fr; }
+    .sidebar, .right-panel { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ══ TOPBAR ══════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <div class="logo">
+      <div class="logo-icon">🧠</div>
+      <div class="logo-text">Resolve<span>AI</span></div>
+    </div>
+    <div class="status-pill">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Checking…</span>
+    </div>
+    <div class="topbar-sep"></div>
+    <button class="train-btn" id="trainBtn" onclick="trainModel()">
+      ⚡ Train Model
+    </button>
+  </header>
+
+  <!-- ══ SIDEBAR ═════════════════════════════════════════════════ -->
+  <aside class="sidebar">
+    <div>
+      <div class="sidebar-section-title">Navigation</div>
+      <div class="nav-item active" id="nav-chat" onclick="switchView('chat')">
+        <span class="nav-icon">💬</span> Submit Complaint
+      </div>
+      <div class="nav-item" id="nav-tickets" onclick="switchView('tickets')">
+        <span class="nav-icon">🎫</span> Support Tickets
+      </div>
+      <div class="nav-item" id="nav-analytics" onclick="switchView('analytics')">
+        <span class="nav-icon">📊</span> Analytics
+      </div>
+    </div>
+
+    <div>
+      <div class="sidebar-section-title">Quick Stats</div>
+      <div class="stat-card" style="margin-bottom:10px">
+        <div class="stat-card-label">Total Complaints</div>
+        <div class="stat-card-value" id="totalComplaints">—</div>
+        <div class="stat-card-sub">all time</div>
+      </div>
+      <div class="stat-card" style="margin-bottom:10px">
+        <div class="stat-card-label">Auto-Resolved</div>
+        <div class="stat-card-value" id="totalResolved" style="color:var(--green)">—</div>
+        <div class="stat-card-sub">high confidence</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Open Tickets</div>
+        <div class="stat-card-value" id="totalTickets" style="color:var(--amber)">—</div>
+        <div class="stat-card-sub">needs human review</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sidebar-section-title">By Category</div>
+      <div class="cat-bar">
+        <div class="cat-bar-row">
+          <div class="cat-bar-label">Billing</div>
+          <div class="cat-bar-track"><div class="cat-bar-fill" id="barBilling" style="width:0%;background:#3b9eff"></div></div>
+          <div class="cat-bar-count" id="countBilling">0</div>
+        </div>
+        <div class="cat-bar-row">
+          <div class="cat-bar-label">Technical</div>
+          <div class="cat-bar-track"><div class="cat-bar-fill" id="barTechnical" style="width:0%;background:#22d3a0"></div></div>
+          <div class="cat-bar-count" id="countTechnical">0</div>
+        </div>
+        <div class="cat-bar-row">
+          <div class="cat-bar-label">Service</div>
+          <div class="cat-bar-track"><div class="cat-bar-fill" id="barService" style="width:0%;background:#f59e0b"></div></div>
+          <div class="cat-bar-count" id="countService">0</div>
+        </div>
+        <div class="cat-bar-row">
+          <div class="cat-bar-label">General</div>
+          <div class="cat-bar-track"><div class="cat-bar-fill" id="barGeneral" style="width:0%;background:#a78bfa"></div></div>
+          <div class="cat-bar-count" id="countGeneral">0</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══ MAIN PANEL ══════════════════════════════════════════════ -->
+  <main class="main">
+
+    <!-- ── CHAT VIEW ────────────────────────────────────────────── -->
+    <div class="view active" id="view-chat">
+
+      <!-- Input card -->
+      <div class="input-card">
+        <div class="input-card-title">🧠 Submit a Complaint</div>
+        <div class="input-card-sub">Describe your issue and our AI will classify and resolve it automatically.</div>
+        <textarea class="complaint-textarea" id="complaintInput"
+          placeholder="e.g. I was charged twice for my subscription this month and need a refund..."
+          oninput="updateCharCount()" rows="5"></textarea>
+        <div class="input-actions">
+          <span class="char-count" id="charCount">0 / 500</span>
+          <button class="submit-btn" id="submitBtn" onclick="submitComplaint()">
+            <span>Analyze Complaint</span> ➜
+          </button>
+        </div>
+        <div class="examples-row">
+          <span class="sidebar-section-title" style="width:100%;margin-bottom:4px">Try an example:</span>
+          <div class="example-chip" onclick="fillExample('My internet keeps disconnecting every hour and I cannot work')">📡 Internet issue</div>
+          <div class="example-chip" onclick="fillExample('I was charged twice for my subscription this month')">💳 Double charge</div>
+          <div class="example-chip" onclick="fillExample('The support agent was rude and did not help me at all')">😤 Bad service</div>
+          <div class="example-chip" onclick="fillExample('What are your cancellation and refund policies?')">❓ General query</div>
+          <div class="example-chip" onclick="fillExample('My app keeps crashing with error code 503')">⚙️ App error</div>
+        </div>
+      </div>
+
+      <!-- Analyzing animation -->
+      <div class="analyzing-card" id="analyzingCard">
+        <div class="spinner-ring"></div>
+        <div style="font-size:15px;font-weight:600;color:var(--accent2)">AI is analyzing your complaint…</div>
+        <div class="analyzing-steps">
+          <div class="analyzing-step" id="step1"><div class="step-dot"></div> NLP Preprocessing</div>
+          <div class="analyzing-step" id="step2"><div class="step-dot"></div> ML Classification</div>
+          <div class="analyzing-step" id="step3"><div class="step-dot"></div> Best-First Search</div>
+          <div class="analyzing-step" id="step4"><div class="step-dot"></div> A* Response Selection</div>
+          <div class="analyzing-step" id="step5"><div class="step-dot"></div> Saving to Database</div>
+        </div>
+      </div>
+
+      <!-- Result card (hidden until result) -->
+      <div id="resultSection" style="display:none"></div>
+
+    </div>
+
+    <!-- ── TICKETS VIEW ──────────────────────────────────────────── -->
+    <div class="view" id="view-tickets">
+      <div class="section-heading">🎫 Support Tickets</div>
+      <div class="section-sub">Complaints that could not be auto-resolved — awaiting human review.</div>
+      <div id="ticketsContainer"><div class="empty-state"><div class="empty-state-icon">🎫</div><div class="empty-state-title">No tickets yet</div><div>Submit a complaint with low confidence to generate a ticket.</div></div></div>
+    </div>
+
+    <!-- ── ANALYTICS VIEW ────────────────────────────────────────── -->
+    <div class="view" id="view-analytics">
+      <div class="section-heading">📊 Analytics Dashboard</div>
+      <div class="section-sub">Overview of all complaint classifications and resolutions.</div>
+      <div class="analytics-grid" id="analyticsGrid">
+        <div class="analytics-cat-card">
+          <div class="analytics-cat-name">💳 Billing</div>
+          <div class="analytics-cat-count" id="aBilling" style="color:#3b9eff">—</div>
+          <div class="analytics-cat-meta" id="aBillingMeta">—</div>
+          <div class="analytics-mini-bar" style="background:linear-gradient(90deg,#3b9eff,#60cfff)"></div>
+        </div>
+        <div class="analytics-cat-card">
+          <div class="analytics-cat-name">⚙️ Technical</div>
+          <div class="analytics-cat-count" id="aTechnical" style="color:#22d3a0">—</div>
+          <div class="analytics-cat-meta" id="aTechnicalMeta">—</div>
+          <div class="analytics-mini-bar" style="background:linear-gradient(90deg,#22d3a0,#6ee7c7)"></div>
+        </div>
+        <div class="analytics-cat-card">
+          <div class="analytics-cat-name">🤝 Service</div>
+          <div class="analytics-cat-count" id="aService" style="color:#f59e0b">—</div>
+          <div class="analytics-cat-meta" id="aServiceMeta">—</div>
+          <div class="analytics-mini-bar" style="background:linear-gradient(90deg,#f59e0b,#fcd34d)"></div>
+        </div>
+        <div class="analytics-cat-card">
+          <div class="analytics-cat-name">📝 General</div>
+          <div class="analytics-cat-count" id="aGeneral" style="color:#a78bfa">—</div>
+          <div class="analytics-cat-meta" id="aGeneralMeta">—</div>
+          <div class="analytics-mini-bar" style="background:linear-gradient(90deg,#a78bfa,#c4b5fd)"></div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-card-label">Model Performance Note</div>
+        <div style="font-size:13px;color:var(--text2);margin-top:4px;line-height:1.7">
+          Auto-resolution triggers when model confidence ≥ <strong style="color:var(--accent2);font-family:var(--mono)">55%</strong>.
+          Lower confidence complaints generate support tickets for human review.
+          Best-First Search and A* algorithms run on every prediction.
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ══ RIGHT PANEL ═════════════════════════════════════════════ -->
+  <aside class="right-panel">
+    <div>
+      <div class="sidebar-section-title">Recent Complaints</div>
+      <div id="historyList">
+        <div class="empty-state" style="padding:24px 0">
+          <div class="empty-state-icon">📭</div>
+          <div class="empty-state-title">No history yet</div>
+          <div>Submit a complaint to see results here.</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+</div>
+
+<!-- ── TOAST ────────────────────────────────────────────────────── -->
+<div class="toast" id="toast"></div>
+
+<script>
+const API = 'http://localhost:5001';
+
+// ────────────────────────────────────────────────────────────────
+// INIT
+// ────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  checkHealth();
+  loadAnalytics();
+  loadHistory();
+  loadTickets();
+});
+
+// ────────────────────────────────────────────────────────────────
+// HEALTH CHECK
+// ────────────────────────────────────────────────────────────────
+async function checkHealth() {
+  try {
+    const res = await fetch(`${API}/health`);
+    if (!res.ok) {
+      const payload = await res.text();
+      throw new Error(payload || `${res.status} ${res.statusText}`);
+    }
+    const data = await res.json();
+    const dot = document.getElementById('statusDot');
+    const txt = document.getElementById('statusText');
+    if (data.model_trained) {
+      dot.className = 'status-dot dot-green';
+      txt.textContent = 'Model Ready';
+    } else {
+      dot.className = 'status-dot dot-amber';
+      txt.textContent = 'Needs Training';
+      showToast('⚠️ Model not trained — click "Train Model" first', 'amber');
+    }
+  } catch (error) {
+    const dot = document.getElementById('statusDot');
+    dot.className = 'status-dot dot-red';
+    document.getElementById('statusText').textContent = 'Backend Offline';
+    showToast(`❌ Cannot reach backend at ${API}: ${error.message}`, 'red');
+  }
+}
+
+// ────────────────────────────────────────────────────────────────
+// TRAIN MODEL
+// ────────────────────────────────────────────────────────────────
+async function trainModel() {
+  const btn = document.getElementById('trainBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Training…';
+  try {
+    const res = await fetch(`${API}/train`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) {
+      showToast('❌ Training failed: ' + (data.error || data.message || res.statusText), 'red');
+    } else if (data.success) {
+      showToast(`✅ Model trained! Accuracy: ${(data.accuracy * 100).toFixed(1)}% on ${data.dataset_size} samples`, 'green');
+      checkHealth();
+    } else {
+      showToast('❌ Training failed: ' + (data.error || 'Unknown error'), 'red');
+    }
+  } catch (error) {
+    showToast(`❌ Cannot reach backend at ${API}: ${error.message}`, 'red');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚡ Train Model';
+  }
+}
+
+// ────────────────────────────────────────────────────────────────
+// SUBMIT COMPLAINT
+// ────────────────────────────────────────────────────────────────
+async function submitComplaint() {
+  const text = document.getElementById('complaintInput').value.trim();
+  if (!text) { showToast('Please enter a complaint', 'amber'); return; }
+  if (text.length < 10) { showToast('Complaint is too short', 'amber'); return; }
+
+  document.getElementById('submitBtn').disabled = true;
+  document.getElementById('resultSection').style.display = 'none';
+
+  // Show analyzing animation
+  const card = document.getElementById('analyzingCard');
+  card.classList.add('visible');
+
+  const steps = ['step1','step2','step3','step4','step5'];
+  steps.forEach(s => document.getElementById(s).className = 'analyzing-step');
+
+  // Animate steps
+  for (let i = 0; i < steps.length; i++) {
+    await sleep(350);
+    document.getElementById(steps[i]).classList.add('active');
+    if (i > 0) document.getElementById(steps[i-1]).className = 'analyzing-step done';
+  }
+
+  try {
+    const res = await fetch(`${API}/predict`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ complaint: text })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || data.message || res.statusText || 'Prediction failed');
+    }
+
+    // Mark all steps done
+    await sleep(400);
+    steps.forEach(s => document.getElementById(s).className = 'analyzing-step done');
+    await sleep(500);
+
+    card.classList.remove('visible');
+    renderResult(data);
+    loadHistory();
+    loadAnalytics();
+    loadTickets();
+    if (data.status === 'ticket_created') switchView('tickets');
+  } catch (e) {
+    card.classList.remove('visible');
+    showToast('❌ Error: ' + e.message, 'red');
+  } finally {
+    document.getElementById('submitBtn').disabled = false;
+  }
+}
+
+// ────────────────────────────────────────────────────────────────
+// RENDER RESULT
+// ────────────────────────────────────────────────────────────────
+function renderResult(d) {
+  const isResolved = d.auto_resolved;
+  const catColor = getCatColor(d.category);
+
+  let probBars = '';
+  const probs = d.probabilities || {};
+  const catColors = { Billing:'#3b9eff', Technical:'#22d3a0', Service:'#f59e0b', General:'#a78bfa' };
+  for (const [cat, prob] of Object.entries(probs).sort((a,b)=>b[1]-a[1])) {
+    probBars += `
+      <div class="prob-row">
+        <div class="prob-label">${cat}</div>
+        <div class="prob-track"><div class="prob-fill" style="width:${(prob*100).toFixed(1)}%;background:${catColors[cat]||'#3b9eff'}"></div></div>
+        <div class="prob-value">${(prob*100).toFixed(1)}%</div>
+      </div>`;
+  }
+
+  let bfsNodes = '';
+  (d.bfs_exploration || []).forEach(node => {
+    bfsNodes += `<div class="bfs-node ${node.is_best?'best':'explored'}">${node.category} ${(node.probability*100).toFixed(1)}%</div>`;
+  });
+
+  let astarRows = '';
+  (d.astar_scores || []).slice(0,6).forEach((n, i) => {
+    astarRows += `<tr class="${i===0?'best-row':''}">
+      <td>${n.id}</td>
+      <td>${n.title.substring(0,22)}…</td>
+      <td>${n.g_score.toFixed(3)}</td>
+      <td>${n.h_score.toFixed(3)}</td>
+      <td><strong>${n.f_score.toFixed(3)}</strong></td>
+    </tr>`;
+  });
+
+  const resolutionSection = isResolved
+    ? `<div class="chat-bubble">${escHtml(d.resolution || '')}</div>`
+    : `<div class="ticket-bubble">
+         <div class="ticket-bubble-title">🎫 Support Ticket Created</div>
+         <div class="ticket-id">${d.ticket_id || 'TKT-XXXXXXXX'}</div>
+         <div class="ticket-meta">A human agent will review your case and contact you within 24 hours.</div>
+       </div>`;
+
+  const html = `
+    <div class="result-card">
+      <div class="result-header ${isResolved?'resolved':'ticket'}">
+        <div class="result-icon">${isResolved?'✅':'🎫'}</div>
+        <div>
+          <div class="result-title">${isResolved ? 'Complaint Auto-Resolved' : 'Ticket Created — Human Review Required'}</div>
+          <div class="result-subtitle">ID: ${d.complaint_id}</div>
+        </div>
+        <div class="result-badge ${isResolved?'badge-green':'badge-amber'}">${isResolved?'RESOLVED':'TICKET'}</div>
+      </div>
+      <div class="result-body">
+
+        ${resolutionSection}
+
+        <div class="grid2">
+          <div class="info-box">
+            <div class="info-box-label">Category</div>
+            <div class="info-box-value" style="color:${catColor}">${d.category}</div>
+          </div>
+          <div class="info-box">
+            <div class="info-box-label">Confidence</div>
+            <div class="info-box-value" style="color:${d.confidence>=0.55?'var(--green)':'var(--amber)'}">${(d.confidence*100).toFixed(1)}%</div>
+          </div>
+        </div>
+
+        <!-- Probability Scores -->
+        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+          <div class="collapsible-header-label">📊 ML Probability Scores</div>
+          <div class="collapsible-arrow">▼</div>
+        </div>
+        <div class="collapsible-content open">
+          <div class="prob-bars">${probBars}</div>
+        </div>
+
+        <!-- BFS Log -->
+        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+          <div class="collapsible-header-label">🔍 Best-First Search Exploration</div>
+          <div class="collapsible-arrow">▼</div>
+        </div>
+        <div class="collapsible-content open">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Priority queue exploration (highest probability first):</div>
+          <div class="bfs-nodes">${bfsNodes}</div>
+        </div>
+
+        ${isResolved && astarRows ? `
+        <!-- A* Log -->
+        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+          <div class="collapsible-header-label">⭐ A* Response Scoring (f = g + h)</div>
+          <div class="collapsible-arrow">▼</div>
+        </div>
+        <div class="collapsible-content open">
+          <table class="astar-table">
+            <thead><tr><th>ID</th><th>Response</th><th>g(n)</th><th>h(n)</th><th>f(n)</th></tr></thead>
+            <tbody>${astarRows}</tbody>
+          </table>
+        </div>` : ''}
+
+        <!-- Preprocessed text -->
+        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+          <div class="collapsible-header-label">🔤 NLP Preprocessed Text</div>
+          <div class="collapsible-arrow">▼</div>
+        </div>
+        <div class="collapsible-content">
+          <div class="preproc-label">After tokenization, stopword removal &amp; cleaning:</div>
+          <div class="preproc-box">${escHtml(d.preprocessed_text || '')}</div>
+        </div>
+
+      </div>
+    </div>`;
+
+  const sec = document.getElementById('resultSection');
+  sec.style.display = 'block';
+  sec.innerHTML = html;
+  sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ────────────────────────────────────────────────────────────────
+// LOAD HISTORY
+// ────────────────────────────────────────────────────────────────
+async function loadHistory() {
+  try {
+    const res = await fetch(`${API}/resolve`);
+    const data = await res.json();
+    const list = document.getElementById('historyList');
+    const complaints = data.complaints || [];
+
+    // Update totals
+    document.getElementById('totalComplaints').textContent = data.total || 0;
+    const resolved = complaints.filter(c => c.status === 'resolved').length;
+    const tickets = complaints.filter(c => c.status === 'ticket_created').length;
+    document.getElementById('totalResolved').textContent = resolved;
+    document.getElementById('totalTickets').textContent = tickets;
+
+    if (!complaints.length) {
+      list.innerHTML = `<div class="empty-state" style="padding:24px 0"><div class="empty-state-icon">📭</div><div class="empty-state-title">No history yet</div></div>`;
+      return;
+    }
+
+    list.innerHTML = complaints.slice(0,10).map(c => `
+      <div class="history-item">
+        <div class="history-item-top">
+          <div class="result-badge ${c.status==='resolved'?'badge-green':'badge-amber'}" style="font-size:10px;padding:2px 8px">${c.status==='resolved'?'✅ Resolved':'🎫 Ticket'}</div>
+          <div class="result-badge badge-blue" style="font-size:10px;padding:2px 8px">${c.category}</div>
+        </div>
+        <div class="history-item-text">${escHtml(truncate(c.text, 80))}</div>
+        <div class="history-item-meta">${c.id} · ${(c.confidence*100).toFixed(0)}% conf</div>
+      </div>`).join('');
+  } catch { /* silent */ }
+}
+
+// ────────────────────────────────────────────────────────────────
+// LOAD TICKETS
+// ────────────────────────────────────────────────────────────────
+async function loadTickets() {
+  try {
+    const res = await fetch(`${API}/tickets`);
+    const data = await res.json();
+    const container = document.getElementById('ticketsContainer');
+    const tickets = data.tickets || [];
+
+    if (!tickets.length) {
+      container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🎫</div><div class="empty-state-title">No open tickets</div><div>Great news — all complaints have been auto-resolved!</div></div>`;
+      return;
+    }
+
+    const priorityColor = { high: 'var(--red)', medium: 'var(--amber)', low: 'var(--green)' };
+
+    container.innerHTML = tickets.map(t => `
+      <div class="ticket-card">
+        <div class="ticket-card-top">
+          <div class="ticket-card-id">${t.id}</div>
+          <div class="result-badge badge-blue" style="font-size:11px">${t.category}</div>
+          <div class="result-badge" style="font-size:11px;color:${priorityColor[t.priority]||'var(--text2)'};background:var(--surface);border:1px solid var(--border)">${t.priority?.toUpperCase()}</div>
+        </div>
+        <div class="ticket-card-text">${escHtml(truncate(t.complaint_text, 120))}</div>
+        <div class="ticket-card-meta">
+          <span>Conf: ${(t.confidence*100).toFixed(0)}%</span>
+          <span>${t.complaint_id}</span>
+          <span>${t.status}</span>
+        </div>
+      </div>`).join('');
+  } catch { /* silent */ }
+}
+
+// ────────────────────────────────────────────────────────────────
+// LOAD ANALYTICS
+// ────────────────────────────────────────────────────────────────
+async function loadAnalytics() {
+  try {
+    const res = await fetch(`${API}/analytics`);
+    const data = await res.json();
+    const analytics = data.analytics || {};
+    const cats = { Billing:'#3b9eff', Technical:'#22d3a0', Service:'#f59e0b', General:'#a78bfa' };
+
+    let maxCount = 1;
+    for (const a of Object.values(analytics)) maxCount = Math.max(maxCount, a.count || 0);
+
+    for (const [cat, color] of Object.entries(cats)) {
+      const a = analytics[cat] || { count: 0, avg_conf: 0, resolved: 0 };
+      const barId = 'bar' + cat;
+      const countId = 'count' + cat;
+      const aId = 'a' + cat;
+      const aMetaId = 'a' + cat + 'Meta';
+
+      const barEl = document.getElementById(barId);
+      if (barEl) barEl.style.width = (maxCount > 0 ? (a.count/maxCount)*100 : 0) + '%';
+      const cntEl = document.getElementById(countId);
+      if (cntEl) cntEl.textContent = a.count || 0;
+      const aEl = document.getElementById(aId);
+      if (aEl) aEl.textContent = a.count || 0;
+      const aMeta = document.getElementById(aMetaId);
+      if (aMeta) aMeta.textContent = `${a.resolved||0} resolved · avg ${((a.avg_conf||0)*100).toFixed(0)}% conf`;
+    }
+  } catch { /* silent */ }
+}
+
+// ────────────────────────────────────────────────────────────────
+// HELPERS
+// ────────────────────────────────────────────────────────────────
+function switchView(view) {
+  ['chat','tickets','analytics'].forEach(v => {
+    document.getElementById('view-'+v).classList.toggle('active', v === view);
+    document.getElementById('nav-'+v)?.classList.toggle('active', v === view);
+  });
+  if (view === 'tickets') loadTickets();
+  if (view === 'analytics') loadAnalytics();
+}
+
+function toggleCollapsible(header) {
+  const arrow = header.querySelector('.collapsible-arrow');
+  const content = header.nextElementSibling;
+  arrow.classList.toggle('open');
+  content.classList.toggle('open');
+}
+
+function fillExample(text) {
+  document.getElementById('complaintInput').value = text;
+  updateCharCount();
+}
+
+function updateCharCount() {
+  const len = document.getElementById('complaintInput').value.length;
+  document.getElementById('charCount').textContent = `${len} / 500`;
+}
+
+function getCatColor(cat) {
+  const map = { Billing:'#3b9eff', Technical:'#22d3a0', Service:'#f59e0b', General:'#a78bfa' };
+  return map[cat] || 'var(--text)';
+}
+
+function escHtml(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function truncate(s, n) {
+  return s && s.length > n ? s.slice(0, n) + '…' : (s || '');
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  const colors = { green:'var(--green)', amber:'var(--amber)', red:'var(--red)', blue:'var(--accent2)' };
+  t.style.borderColor = colors[type] || 'var(--border2)';
+  t.innerHTML = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 4000);
+}
+</script>
+</body>
+</html>

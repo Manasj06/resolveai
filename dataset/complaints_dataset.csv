@@ -1,0 +1,101 @@
+complaint,category
+"My internet connection keeps dropping every few hours and I can't work from home",Technical
+"The bill charged to my account is incorrect and shows double the amount",Billing
+"Your customer service representative was extremely rude and unhelpful",Service
+"I have a general question about your company policies",General
+"My router shows no internet light and nothing I do fixes it",Technical
+"I was charged twice for the same subscription this month",Billing
+"I waited on hold for 45 minutes and nobody answered my call",Service
+"What are your business hours for customer support?",General
+"My connection speed is much slower than the plan I'm paying for",Technical
+"There is an unauthorized charge of $49.99 on my account",Billing
+"The technician who visited my home was unprofessional and late",Service
+"Can you explain the difference between your basic and premium plans?",General
+"I keep getting error code 503 when trying to access the portal",Technical
+"My invoice shows charges for services I never signed up for",Billing
+"Your support staff gave me wrong information and now I'm worse off",Service
+"How do I update my account information online?",General
+"The app keeps crashing every time I try to login",Technical
+"I cancelled my subscription but I'm still being charged monthly",Billing
+"I requested a callback 3 days ago and no one has contacted me",Service
+"What documents do I need to open a new account?",General
+"My device shows connected but there is no actual internet access",Technical
+"My payment was deducted twice in the same billing cycle",Billing
+"The customer support chat bot is useless and keeps looping",Service
+"Do you offer any student or senior citizen discounts?",General
+"Video calls keep disconnecting and freezing during meetings",Technical
+"I see a mysterious charge labeled MISC FEE on my statement",Billing
+"I've been transferred between 5 different departments with no resolution",Service
+"I want to know how to cancel my account if needed",General
+"My smart TV cannot connect to your streaming service anymore",Technical
+"You charged me a late fee even though I paid on time with proof",Billing
+"The service representative promised a callback but never called back",Service
+"What is the process to file a formal complaint with your company?",General
+"DNS errors are appearing whenever I try to browse any website",Technical
+"My auto-renewal payment was processed at the wrong billing amount",Billing
+"Your online chat support disconnected and lost all my complaint details",Service
+"Are there any ongoing promotions or deals available right now?",General
+"The firmware update completely broke my device functionality",Technical
+"I requested a refund 2 weeks ago and still haven't received it",Billing
+"No one from your team follows up on tickets I've submitted before",Service
+"How long does it typically take to process a new application?",General
+"Ports are blocked and affecting my ability to use work VPN",Technical
+"My account shows an outstanding balance that I have already paid",Billing
+"The technician cancelled my appointment without any prior notice",Service
+"What are the terms and conditions for your refund policy?",General
+"My modem lights indicate an issue but diagnostics show everything fine",Technical
+"I was promised a discount that was never applied to my bill",Billing
+"I submitted a complaint ticket 10 days ago and got no response",Service
+"Can I transfer my account to another person in my family?",General
+"Streaming services buffer constantly even with a fast internet plan",Technical
+"The promo rate I was quoted expired before my account was set up",Billing
+"Your support team keeps giving me different answers each time I call",Service
+"Is there a mobile app available for managing my account?",General
+"My IP address keeps changing and it disrupts my work setup",Technical
+"I'm being charged for equipment rental that I returned months ago",Billing
+"I feel ignored every time I contact your customer service team",Service
+"What security features does your service offer for protection?",General
+"The connection works fine in some rooms but not others in my house",Technical
+"An unexpected early termination fee appeared on my final bill",Billing
+"I need to escalate my issue as nobody is resolving it at support level",Service
+"How do I enable two-factor authentication on my account?",General
+"Packet loss is extremely high making online gaming completely unplayable",Technical
+"My billing cycle date was changed without my knowledge or consent",Billing
+"Your automated phone system keeps hanging up before I reach an agent",Service
+"Do you provide parental controls as part of your service package?",General
+"My upload speed is consistently 10x slower than advertised speeds",Technical
+"A credit I was promised on my account never appeared in billing",Billing
+"I've been waiting 3 weeks for my issue to be resolved with no update",Service
+"What is the minimum contract period for your service plans?",General
+"The setup wizard fails at step 3 and installation cannot complete",Technical
+"I received a final demand notice for a bill I already paid in full",Billing
+"Your support agent closed my ticket without actually solving anything",Service
+"Can I use my account in multiple locations or is it location-locked?",General
+"My connection completely dies every night between 8pm and 10pm",Technical
+"I was enrolled in a premium plan without giving my explicit consent",Billing
+"Every agent I speak to gives me conflicting information about my issue",Service
+"What happens to my data if I decide to close my account?",General
+"The parental control settings I configured keep resetting themselves",Technical
+"My statement shows a price increase that I was never notified about",Billing
+"I was on hold for over 2 hours and my problem still went unresolved",Service
+"Is your service compatible with all operating systems and devices?",General
+"Remote desktop tools fail because of port restrictions on your network",Technical
+"You charged me a paper bill fee despite me opting into paperless billing",Billing
+"I filed a formal complaint and never received an acknowledgment",Service
+"What is the procedure for requesting a service upgrade or downgrade?",General
+"My account dashboard shows error and won't load any of my data",Technical
+"The referral bonus credit I earned was never applied to my account",Billing
+"The representative I spoke to was dismissive and did not listen to me",Service
+"Can I pause my subscription temporarily during my vacation travel?",General
+"Automatic software updates are failing and showing certificate errors",Technical
+"My final bill has charges listed for an entire month after cancellation",Billing
+"I need to speak to a manager because nobody else is helping my case",Service
+"What are my rights as a consumer if the service quality is poor?",General
+"My smart home devices lose connectivity randomly and reconnect slowly",Technical
+"I was charged a setup fee that was clearly listed as free in the offer",Billing
+"It has been over a month and my complaint remains completely unresolved",Service
+"Do you have a loyalty program or rewards for long-term customers?",General
+"The network outage in my area has lasted for more than 48 hours",Technical
+"I received a debt collection notice for an amount I do not owe you",Billing
+"Your support staff lacks proper training and keeps making things worse",Service
+"How do I report a technical issue if the online portal is not working?",General
