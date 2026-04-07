@@ -25,7 +25,7 @@ import sqlite3
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify, session, send_from_directory
 from flask_cors import CORS
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 
@@ -42,7 +42,8 @@ from backend.database import (
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__)
+FRONTEND_PATH = os.path.join(ROOT, "frontend")
+app = Flask(__name__, static_folder=FRONTEND_PATH, static_url_path="")
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 CORS(app, supports_credentials=True)  # Allow credentials for session management
 
@@ -78,6 +79,15 @@ def health():
         "service": "ResolveAI",
         "authenticated": current_user.is_authenticated if current_user else False
     })
+
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_frontend(path):
+    """Serve the React/HTML frontend from the frontend directory."""
+    if path != "" and os.path.exists(os.path.join(FRONTEND_PATH, path)):
+        return send_from_directory(FRONTEND_PATH, path)
+    return send_from_directory(FRONTEND_PATH, 'index.html')
 
 
 # ─────────────────────────────────────────────────────────────────────────────
