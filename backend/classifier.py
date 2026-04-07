@@ -34,12 +34,17 @@ try:
     import nltk
     from nltk.corpus import stopwords
     from nltk.tokenize import word_tokenize
+    from nltk.stem import WordNetLemmatizer
     nltk.download("stopwords", quiet=True)
     nltk.download("punkt", quiet=True)
+    nltk.download("wordnet", quiet=True)
+    nltk.download("omw-1.4", quiet=True)
     NLTK_AVAILABLE = True
     STOP_WORDS = set(stopwords.words("english"))
+    LEMMATIZER = WordNetLemmatizer()
 except Exception:
     NLTK_AVAILABLE = False
+    LEMMATIZER = None
     # Fallback English stopwords
     STOP_WORDS = {
         "i", "me", "my", "myself", "we", "our", "ours", "ourselves", "you",
@@ -72,7 +77,8 @@ def preprocess_text(text: str) -> str:
       2. Remove special characters / numbers
       3. Tokenize
       4. Remove stopwords
-      5. Rejoin tokens
+      5. Lemmatize
+      6. Rejoin tokens
 
     Parameters
     ----------
@@ -103,7 +109,14 @@ def preprocess_text(text: str) -> str:
         if t not in STOP_WORDS and len(t) > 2
     ]
 
-    # Step 5: Rejoin
+    # Step 5: Lemmatize
+    if NLTK_AVAILABLE and LEMMATIZER:
+        try:
+            tokens = [LEMMATIZER.lemmatize(t) for t in tokens]
+        except Exception:
+            pass  # Skip lemmatization if it fails
+
+    # Step 6: Rejoin
     return " ".join(tokens)
 
 
