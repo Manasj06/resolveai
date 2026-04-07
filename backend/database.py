@@ -171,11 +171,11 @@ def create_ticket(
 
 
 def get_all_tickets(limit: int = 50) -> List[dict]:
-    """Fetch most recent open tickets."""
+    """Fetch most recent open tickets only."""
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT * FROM tickets ORDER BY created_at DESC LIMIT ?", (limit,)
+        "SELECT * FROM tickets WHERE status = 'open' ORDER BY created_at DESC LIMIT ?", (limit,)
     )
     rows = [dict(row) for row in cursor.fetchall()]
     conn.close()
