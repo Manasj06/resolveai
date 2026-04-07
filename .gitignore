@@ -8,6 +8,22 @@ venv/
 env/
 ENV/
 *.egg-info/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Test files
+cookies.txt
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
 dist/
 build/
 
