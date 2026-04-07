@@ -35,8 +35,10 @@ sys.path.insert(0, ROOT)
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import MultinomialNB
+from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.pipeline import Pipeline
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV, StratifiedKFold
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
 
 from backend.classifier import preprocess_text
@@ -69,17 +71,17 @@ def load_dataset(path: str):
 
 def train(texts, labels, model_type="logistic", output_path=DEFAULT_MODEL_OUT):
     print("\n" + "═"*60)
-    print("  ResolveAI  –  Model Training")
+    print("  ResolveAI  –  Model Training (Enhanced)")
     print("═"*60)
 
     # ── Step 1: Preprocess ───────────────────────────────────────────────────
-    print("\n[1/5] Preprocessing texts…")
+    print("\n[1/6] Preprocessing texts…")
     processed = [preprocess_text(t) for t in texts]
     print(f"      Sample: '{texts[0][:60]}…'")
     print(f"      → '{processed[0]}'")
 
     # ── Step 2: Train/test split ─────────────────────────────────────────────
-    print("\n[2/5] Splitting dataset (80/20)…")
+    print("\n[2/6] Splitting dataset (80/20 stratified)…")
     X_train, X_test, y_train, y_test = train_test_split(
         processed, labels, test_size=0.2, random_state=42, stratify=labels
     )
@@ -92,35 +94,62 @@ def train(texts, labels, model_type="logistic", output_path=DEFAULT_MODEL_OUT):
     for cat, cnt in sorted(dist.items()):
         print(f"        {cat:<12} {cnt} samples")
 
-    # ── Step 3: Build pipeline ───────────────────────────────────────────────
-    print(f"\n[3/5] Building TF-IDF + {model_type.title()} pipeline…")
+    # ── Step 3: Build TF-IDF vectorizer ──────────────────────────────────────
+    print(f"\n[3/6] Building enhanced TF-IDF vectorizer…")
 
     tfidf = TfidfVectorizer(
         max_features=5000,
         ngram_range=(1, 2),
         min_df=1,
+        max_df=0.95,  # Remove very common terms
         stop_words="english",
-        sublinear_tf=True
+        sublinear_tf=True,
+        use_idf=True
     )
 
-    if model_type == "naive_bayes":
-        clf = MultinomialNB(alpha=0.5)
-    else:
-        clf = LogisticRegression(max_iter=1000, C=1.0, solver="lbfgs", multi_class="auto")
+    # ── Step 4: Try multiple algorithms with hyperparameter tuning ───────────
+    print(f"\n[4/6] Comparing multiple algorithms with tuning…")
+    
+    results = {}
+    
+    # Logistic Regression with tuning
+    print("      Testing Logistic Regression…")
+    lr_pipeline = Pipeline([("tfidf", tfidf), ("clf", LogisticRegression(max_iter=1000, class_weight="balanced"))])
+    lr_params = {"clf__C": [0.1, 1.0, 10.0]}
+    lr_grid = GridSearchCV(lr_pipeline, lr_params, cv=5, scoring="accuracy", n_jobs=-1, verbose=0)
+    lr_grid.fit(X_train, y_train)
+    lr_score = lr_grid.best_score_
+    results["Logistic Regression"] = (lr_grid, lr_score)
+    print(f"        CV Score: {lr_score:.4f}, Best C: {lr_grid.best_params_['clf__C']}")
 
-    pipeline = Pipeline([("tfidf", tfidf), ("clf", clf)])
+    # SVM (often better for small datasets)
+    print("      Testing Support Vector Machine (SVM)…")
+    svm_pipeline = Pipeline([("tfidf", tfidf), ("clf", SVC(kernel="rbf", probability=True, class_weight="balanced"))])
+    svm_params = {"clf__C": [0.1, 1.0, 10.0], "clf__gamma": ["scale", "auto"]}
+    svm_grid = GridSearchCV(svm_pipeline, svm_params, cv=5, scoring="accuracy", n_jobs=-1, verbose=0)
+    svm_grid.fit(X_train, y_train)
+    svm_score = svm_grid.best_score_
+    results["SVM"] = (svm_grid, svm_score)
+    print(f"        CV Score: {svm_score:.4f}")
 
-    # ── Step 4: Train ────────────────────────────────────────────────────────
-    print(f"\n[4/5] Training {model_type.title()} classifier…")
-    pipeline.fit(X_train, y_train)
+    # Naive Bayes (baseline fast classifier)
+    print("      Testing Naive Bayes…")
+    nb_pipeline = Pipeline([("tfidf", tfidf), ("clf", MultinomialNB(alpha=0.1))])
+    nb_scores = cross_val_score(nb_pipeline, X_train, y_train, cv=5, scoring="accuracy")
+    nb_score = nb_scores.mean()
+    nb_pipeline.fit(X_train, y_train)
+    results["Naive Bayes"] = (nb_pipeline, nb_score)
+    print(f"        CV Score: {nb_score:.4f}")
 
-    # Cross-validation
-    cv_scores = cross_val_score(pipeline, processed, labels, cv=5, scoring="accuracy")
-    print(f"      5-fold CV accuracy: {cv_scores.mean():.4f} ± {cv_scores.std():.4f}")
+    # Select best model
+    best_name = max(results.keys(), key=lambda k: results[k][1])
+    best_model, best_cv_score = results[best_name]
+    
+    print(f"\n      Best Algorithm: {best_name} (CV Score: {best_cv_score:.4f})")
 
-    # ── Step 5: Evaluate ─────────────────────────────────────────────────────
-    print(f"\n[5/5] Evaluating on test set…")
-    y_pred = pipeline.predict(X_test)
+    # ── Step 5: Evaluate on test set ──────────────────────────────────────────
+    print(f"\n[5/6] Evaluating best model on test set…")
+    y_pred = best_model.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
 
     print(f"\n      Test Accuracy: {accuracy:.4f} ({accuracy*100:.1f}%)")
@@ -143,15 +172,16 @@ def train(texts, labels, model_type="logistic", output_path=DEFAULT_MODEL_OUT):
         row_str = "  " + row_label.ljust(col_width) + "".join(str(v).ljust(col_width) for v in row)
         print(row_str)
 
-    # ── Save model ───────────────────────────────────────────────────────────
+    # ── Step 6: Save model ───────────────────────────────────────────────────
+    print(f"\n[6/6] Saving best model ({best_name})…")
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     with open(output_path, "wb") as f:
-        pickle.dump(pipeline, f)
+        pickle.dump(best_model, f)
 
     print(f"\n✓ Model saved to: {output_path}")
     print("═"*60 + "\n")
 
-    return pipeline, accuracy
+    return best_model, accuracy
 
 
 # ─────────────────────────────────────────────────────────────────────────────
