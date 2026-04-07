@@ -215,6 +215,36 @@ def analytics():
     return jsonify({"analytics": data})
 
 
+@app.route("/resolve_ticket", methods=["POST"])
+def resolve_ticket():
+    """
+    Human reviewer endpoint: mark a ticket as resolved with notes.
+    
+    Request body (JSON):
+      { "ticket_id": "TKT-XXXXX", "resolution_notes": "human review notes" }
+    """
+    body = request.get_json(silent=True) or {}
+    ticket_id = body.get("ticket_id", "").strip()
+    resolution_notes = body.get("resolution_notes", "").strip()
+
+    if not ticket_id or not resolution_notes:
+        return jsonify({"error": "ticket_id and resolution_notes required"}), 400
+
+    try:
+        conn = get_connection()
+        conn.execute(
+            "UPDATE tickets SET status=? WHERE id=?",
+            ("resolved", ticket_id)
+        )
+        conn.commit()
+        conn.close()
+        logger.info(f"Ticket {ticket_id} marked resolved by human reviewer")
+        return jsonify({"success": True, "message": f"Ticket {ticket_id} resolved"})
+    except Exception as e:
+        logger.error(f"Error resolving ticket: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     logger.info("Starting ResolveAI backend on http://localhost:5000")

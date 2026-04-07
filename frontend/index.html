@@ -436,6 +436,97 @@
   .ticket-card-text { font-size: 13px; color: var(--text2); line-height: 1.5; }
   .ticket-card-meta { font-size: 11px; color: var(--text3); margin-top: 8px; display: flex; gap: 12px; font-family: var(--mono); }
 
+  .ticket-review-btn {
+    margin-top: 12px;
+    width: 100%;
+    padding: 8px 12px;
+    background: linear-gradient(135deg, var(--amber), #f59e0b);
+    border: none;
+    border-radius: var(--radius-sm);
+    color: #fff;
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .ticket-review-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(245,158,11,0.3); }
+  .ticket-review-btn:active { transform: translateY(0); }
+
+  /* ── REVIEW MODAL ────────────────────────────────────────────── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.visible { display: flex; }
+
+  .modal-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+
+  .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .modal-subtitle { font-size: 12px; color: var(--text3); margin-bottom: 16px; }
+  .modal-section { margin-bottom: 16px; }
+  .modal-label { font-size: 11px; font-weight: 600; color: var(--text3); margin-bottom: 4px; text-transform: uppercase; }
+  .modal-text { font-size: 13px; color: var(--text2); padding: 8px 12px; background: var(--surface); border-radius: var(--radius-sm); }
+  .modal-textarea {
+    width: 100%;
+    min-height: 80px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    resize: vertical;
+    outline: none;
+  }
+  .modal-textarea:focus { border-color: var(--accent); }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  .modal-btn {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .modal-btn-primary {
+    background: linear-gradient(135deg, var(--green), #10b981);
+    color: #fff;
+  }
+  .modal-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(34,211,160,0.3); }
+  .modal-btn-secondary {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text2);
+  }
+  .modal-btn-secondary:hover { background: var(--bg3); }
+
   /* ── ANALYTICS VIEW ──────────────────────────────────────────── */
   .analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .analytics-cat-card {
@@ -695,6 +786,34 @@
     </div>
   </aside>
 
+</div>
+
+<!-- ── REVIEW MODAL ────────────────────────────────────────────── -->
+<div class="modal-overlay" id="reviewModal">
+  <div class="modal-box">
+    <div class="modal-title">📋 Review & Resolve Ticket</div>
+    <div class="modal-subtitle" id="reviewTicketId"></div>
+
+    <div class="modal-section">
+      <div class="modal-label">Complaint</div>
+      <div class="modal-text" id="reviewComplaint"></div>
+    </div>
+
+    <div class="modal-section">
+      <div class="modal-label">Category</div>
+      <div class="modal-text" id="reviewCategory"></div>
+    </div>
+
+    <div class="modal-section">
+      <div class="modal-label">Your Resolution/Notes</div>
+      <textarea class="modal-textarea" id="resolutionText" placeholder="Enter your resolution or notes for this complaint..."></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-primary" onclick="submitResolution()">✓ Mark Resolved</button>
+      <button class="modal-btn modal-btn-secondary" onclick="closeReviewModal()">Cancel</button>
+    </div>
+  </div>
 </div>
 
 <!-- ── TOAST ────────────────────────────────────────────────────── -->
@@ -1006,6 +1125,7 @@ async function loadTickets() {
           <span>${t.complaint_id}</span>
           <span>${t.status}</span>
         </div>
+        <button class="ticket-review-btn" onclick="reviewTicket('${t.id}', '${t.complaint_text.replace(/'/g, "\\'")}', '${t.category}')">📋 Review & Resolve</button>
       </div>`).join('');
   } catch { /* silent */ }
 }
@@ -1094,6 +1214,66 @@ function showToast(msg, type) {
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 4000);
 }
+
+// ────────────────────────────────────────────────────────────────
+// TICKET REVIEW
+// ────────────────────────────────────────────────────────────────
+let currentTicketId = null;
+
+function reviewTicket(ticketId, complaintText, category) {
+  currentTicketId = ticketId;
+  document.getElementById('reviewTicketId').textContent = `Ticket: ${ticketId}`;
+  document.getElementById('reviewComplaint').textContent = complaintText;
+  document.getElementById('reviewCategory').textContent = category;
+  document.getElementById('resolutionText').value = '';
+  document.getElementById('reviewModal').classList.add('visible');
+}
+
+function closeReviewModal() {
+  document.getElementById('reviewModal').classList.remove('visible');
+  currentTicketId = null;
+}
+
+async function submitResolution() {
+  if (!currentTicketId) return;
+  
+  const resolution = document.getElementById('resolutionText').value.trim();
+  if (!resolution) {
+    showToast('Please enter a resolution', 'amber');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API}/resolve_ticket`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticket_id: currentTicketId, resolution_notes: resolution })
+    });
+    
+    const data = await res.json();
+    if (res.ok && data.success) {
+      showToast(`✓ Ticket ${currentTicketId} marked resolved!`, 'green');
+      closeReviewModal();
+      loadTickets();
+      loadHistory();
+      loadAnalytics();
+    } else {
+      showToast(`✗ Error: ${data.error || 'Failed to resolve'}`, 'red');
+    }
+  } catch (e) {
+    showToast(`✗ Error: ${e.message}`, 'red');
+  }
+}
+
+// Close modal on overlay click
+document.addEventListener('DOMContentLoaded', () => {
+  const modal = document.getElementById('reviewModal');
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeReviewModal();
+    });
+  }
+});
 </script>
 </body>
 </html>
