@@ -1115,18 +1115,26 @@ async function loadTickets() {
     container.innerHTML = tickets.map(t => `
       <div class="ticket-card">
         <div class="ticket-card-top">
-          <div class="ticket-card-id">${t.id}</div>
-          <div class="result-badge badge-blue" style="font-size:11px">${t.category}</div>
-          <div class="result-badge" style="font-size:11px;color:${priorityColor[t.priority]||'var(--text2)'};background:var(--surface);border:1px solid var(--border)">${t.priority?.toUpperCase()}</div>
+          <div class="ticket-card-id">${escHtml(t.id)}</div>
+          <div class="result-badge badge-blue" style="font-size:11px">${escHtml(t.category)}</div>
+          <div class="result-badge" style="font-size:11px;color:${priorityColor[t.priority]||'var(--text2)'};background:var(--surface);border:1px solid var(--border)">${escHtml((t.priority||'').toUpperCase())}</div>
         </div>
         <div class="ticket-card-text">${escHtml(truncate(t.complaint_text, 120))}</div>
         <div class="ticket-card-meta">
           <span>Conf: ${(t.confidence*100).toFixed(0)}%</span>
-          <span>${t.complaint_id}</span>
-          <span>${t.status}</span>
+          <span>${escHtml(t.complaint_id)}</span>
+          <span>${escHtml(t.status)}</span>
         </div>
-        <button class="ticket-review-btn" onclick="reviewTicket('${t.id}', '${t.complaint_text.replace(/'/g, "\\'")}', '${t.category}')">📋 Review & Resolve</button>
+        <button class="ticket-review-btn"
+          data-ticket-id="${escHtml(t.id)}"
+          data-ticket-text="${escHtml(t.complaint_text.replace(/\n/g, ' '))}"
+          data-ticket-category="${escHtml(t.category)}"
+        >📋 Review & Resolve</button>
       </div>`).join('');
+
+    container.querySelectorAll('.ticket-review-btn').forEach(btn => {
+      btn.addEventListener('click', handleReviewButtonClick);
+    });
   } catch { /* silent */ }
 }
 
@@ -1263,6 +1271,11 @@ async function submitResolution() {
   } catch (e) {
     showToast(`✗ Error: ${e.message}`, 'red');
   }
+}
+
+function handleReviewButtonClick(event) {
+  const btn = event.currentTarget;
+  reviewTicket(btn.dataset.ticketId, btn.dataset.ticketText, btn.dataset.ticketCategory);
 }
 
 // Close modal on overlay click

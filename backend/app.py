@@ -232,10 +232,32 @@ def resolve_ticket():
 
     try:
         conn = get_connection()
-        conn.execute(
+        cursor = conn.cursor()
+        ticket_row = cursor.execute(
+            "SELECT complaint_id, category FROM tickets WHERE id = ?",
+            (ticket_id,)
+        ).fetchone()
+
+        if not ticket_row:
+            conn.close()
+            return jsonify({"error": "Ticket not found"}), 404
+
+        complaint_id = ticket_row["complaint_id"]
+        category = ticket_row["category"]
+
+        cursor.execute(
             "UPDATE tickets SET status=? WHERE id=?",
             ("resolved", ticket_id)
         )
+        cursor.execute(
+            "UPDATE complaints SET status=?, response=? WHERE ticket_id= ?",
+            ("resolved", resolution_notes, ticket_id)
+        )
+        cursor.execute(
+            "UPDATE analytics SET resolved = resolved + 1, tickets = CASE WHEN tickets > 0 THEN tickets - 1 ELSE 0 END WHERE category = ?",
+            (category,)
+        )
+
         conn.commit()
         conn.close()
         logger.info(f"Ticket {ticket_id} marked resolved by human reviewer")
