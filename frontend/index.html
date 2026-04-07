@@ -397,6 +397,151 @@
   }
   .preproc-label { font-size: 11px; color: var(--text3); margin-bottom: 6px; }
 
+  /* ── AUTHENTICATION STYLES ───────────────────────────────────── */
+  .auth-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(10,14,26,0.95);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+  }
+  .auth-overlay.active {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .auth-modal {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+  }
+
+  .auth-title {
+    font-size: 24px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .auth-subtitle {
+    text-align: center;
+    color: var(--text2);
+    margin-bottom: 24px;
+    font-size: 14px;
+  }
+
+  .auth-form { display: flex; flex-direction: column; gap: 16px; }
+
+  .auth-input {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: 14px;
+    transition: border-color 0.2s;
+  }
+  .auth-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .auth-input::placeholder { color: var(--text3); }
+
+  .auth-btn {
+    width: 100%;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    border-radius: var(--radius);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .auth-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px var(--accent-glow);
+  }
+  .auth-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .auth-toggle {
+    text-align: center;
+    margin-top: 16px;
+    font-size: 14px;
+    color: var(--text2);
+  }
+  .auth-toggle a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .auth-toggle a:hover { text-decoration: underline; }
+
+  .auth-error {
+    background: var(--red-bg);
+    border: 1px solid rgba(248,113,113,0.3);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    font-size: 14px;
+    color: var(--red);
+    display: none;
+  }
+
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+  }
+  .user-details { flex: 1; }
+  .user-email { font-size: 14px; font-weight: 500; }
+  .user-logout {
+    background: none;
+    border: none;
+    color: var(--text2);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    transition: color 0.2s;
+  }
+  .user-logout:hover { color: var(--red); }
+
   /* ── RIGHT PANEL ─────────────────────────────────────────────── */
   .right-panel {
     background: var(--bg2);
@@ -596,6 +741,39 @@
 </head>
 <body>
 
+<!-- ══ AUTHENTICATION OVERLAY ═══════════════════════════════════ -->
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-modal">
+    <div class="auth-title" id="authTitle">Welcome to ResolveAI</div>
+    <div class="auth-subtitle" id="authSubtitle">Sign in to your account to continue</div>
+
+    <div class="auth-error" id="authError"></div>
+
+    <form class="auth-form" id="authForm" onsubmit="handleAuth(event)">
+      <input
+        type="email"
+        class="auth-input"
+        id="emailInput"
+        placeholder="Email address"
+        required
+      />
+      <input
+        type="password"
+        class="auth-input"
+        id="passwordInput"
+        placeholder="Password"
+        required
+      />
+      <button type="submit" class="auth-btn" id="authBtn">Sign In</button>
+    </form>
+
+    <div class="auth-toggle">
+      <span id="authToggleText">Don't have an account? </span>
+      <a href="#" onclick="toggleAuthMode()">Sign up</a>
+    </div>
+  </div>
+</div>
+
 <div class="shell">
 
   <!-- ══ TOPBAR ══════════════════════════════════════════════════ -->
@@ -609,7 +787,16 @@
       <span id="statusText">Checking…</span>
     </div>
     <div class="topbar-sep"></div>
-    <button class="train-btn" id="trainBtn" onclick="trainModel()">
+    <div class="user-info" id="userInfo" style="display: none;">
+      <div class="user-avatar" id="userAvatar">U</div>
+      <div class="user-details">
+        <div class="user-email" id="userEmail">user@example.com</div>
+      </div>
+      <button class="user-logout" onclick="logout()" title="Logout">
+        🚪
+      </button>
+    </div>
+    <button class="train-btn" id="trainBtn" onclick="trainModel()" style="display: none;">
       ⚡ Train Model
     </button>
   </header>
@@ -826,18 +1013,143 @@ const API = 'http://localhost:5001';
 // INIT
 // ────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
-  checkHealth();
-  loadAnalytics();
-  loadHistory();
-  loadTickets();
+  checkAuthStatus();
 });
+
+// ────────────────────────────────────────────────────────────────
+// AUTHENTICATION
+// ────────────────────────────────────────────────────────────────
+let currentUser = null;
+let authMode = 'login'; // 'login' or 'signup'
+
+async function checkAuthStatus() {
+  try {
+    const res = await fetch(`${API}/auth/status`, {
+      credentials: 'include'
+    });
+    const data = await res.json();
+
+    if (data.authenticated) {
+      currentUser = data.user;
+      showAuthenticatedUI();
+      checkHealth();
+      loadAnalytics();
+      loadHistory();
+      loadTickets();
+    } else {
+      showAuthOverlay();
+    }
+  } catch (error) {
+    console.error('Auth check failed:', error);
+    showAuthOverlay();
+  }
+}
+
+function showAuthOverlay() {
+  document.getElementById('authOverlay').classList.add('active');
+  document.querySelector('.shell').style.display = 'none';
+}
+
+function hideAuthOverlay() {
+  document.getElementById('authOverlay').classList.remove('active');
+  document.querySelector('.shell').style.display = 'grid';
+}
+
+function showAuthenticatedUI() {
+  document.getElementById('userEmail').textContent = currentUser.email;
+  document.getElementById('userAvatar').textContent = currentUser.email.charAt(0).toUpperCase();
+  document.getElementById('userInfo').style.display = 'flex';
+  document.getElementById('trainBtn').style.display = 'block';
+}
+
+function toggleAuthMode() {
+  authMode = authMode === 'login' ? 'signup' : 'login';
+  const title = document.getElementById('authTitle');
+  const subtitle = document.getElementById('authSubtitle');
+  const btn = document.getElementById('authBtn');
+  const toggleText = document.getElementById('authToggleText');
+
+  if (authMode === 'signup') {
+    title.textContent = 'Create Account';
+    subtitle.textContent = 'Join ResolveAI to get started';
+    btn.textContent = 'Sign Up';
+    toggleText.textContent = 'Already have an account? ';
+  } else {
+    title.textContent = 'Welcome to ResolveAI';
+    subtitle.textContent = 'Sign in to your account to continue';
+    btn.textContent = 'Sign In';
+    toggleText.textContent = 'Don\'t have an account? ';
+  }
+}
+
+async function handleAuth(event) {
+  event.preventDefault();
+
+  const email = document.getElementById('emailInput').value;
+  const password = document.getElementById('passwordInput').value;
+  const errorDiv = document.getElementById('authError');
+  const btn = document.getElementById('authBtn');
+
+  // Clear previous error
+  errorDiv.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = authMode === 'login' ? 'Signing In...' : 'Creating Account...';
+
+  try {
+    const endpoint = authMode === 'login' ? '/auth/login' : '/auth/signup';
+    const res = await fetch(`${API}${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email, password })
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      currentUser = data.user;
+      hideAuthOverlay();
+      showAuthenticatedUI();
+      checkHealth();
+      loadAnalytics();
+      loadHistory();
+      loadTickets();
+      showToast(`✅ Welcome, ${currentUser.email}!`, 'green');
+    } else {
+      errorDiv.textContent = data.error || 'Authentication failed';
+      errorDiv.style.display = 'block';
+    }
+  } catch (error) {
+    errorDiv.textContent = 'Network error. Please try again.';
+    errorDiv.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = authMode === 'login' ? 'Sign In' : 'Sign Up';
+  }
+}
+
+async function logout() {
+  try {
+    await fetch(`${API}/auth/logout`, {
+      method: 'POST',
+      credentials: 'include'
+    });
+    currentUser = null;
+    document.getElementById('userInfo').style.display = 'none';
+    document.getElementById('trainBtn').style.display = 'none';
+    showAuthOverlay();
+    showToast('👋 Logged out successfully', 'green');
+  } catch (error) {
+    showToast('❌ Logout failed', 'red');
+  }
+}
 
 // ────────────────────────────────────────────────────────────────
 // HEALTH CHECK
 // ────────────────────────────────────────────────────────────────
 async function checkHealth() {
   try {
-    const res = await fetch(`${API}/health`);
+    const res = await fetch(`${API}/health`, { credentials: 'include' });
     if (!res.ok) {
       const payload = await res.text();
       throw new Error(payload || `${res.status} ${res.statusText}`);
@@ -869,7 +1181,7 @@ async function trainModel() {
   btn.disabled = true;
   btn.textContent = '⏳ Training…';
   try {
-    const res = await fetch(`${API}/train`, { method: 'POST' });
+    const res = await fetch(`${API}/train`, { method: 'POST', credentials: 'include' });
     const data = await res.json();
     if (!res.ok) {
       showToast('❌ Training failed: ' + (data.error || data.message || res.statusText), 'red');
@@ -916,6 +1228,7 @@ async function submitComplaint() {
     const res = await fetch(`${API}/predict`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ complaint: text })
     });
     const data = await res.json();
@@ -1066,7 +1379,7 @@ function renderResult(d) {
 // ────────────────────────────────────────────────────────────────
 async function loadHistory() {
   try {
-    const res = await fetch(`${API}/resolve`);
+    const res = await fetch(`${API}/resolve`, { credentials: 'include' });
     const data = await res.json();
     const list = document.getElementById('historyList');
     const complaints = data.complaints || [];
@@ -1100,7 +1413,7 @@ async function loadHistory() {
 // ────────────────────────────────────────────────────────────────
 async function loadTickets() {
   try {
-    const res = await fetch(`${API}/tickets`);
+    const res = await fetch(`${API}/tickets`, { credentials: 'include' });
     const data = await res.json();
     const container = document.getElementById('ticketsContainer');
     const tickets = data.tickets || [];
@@ -1143,7 +1456,7 @@ async function loadTickets() {
 // ────────────────────────────────────────────────────────────────
 async function loadAnalytics() {
   try {
-    const res = await fetch(`${API}/analytics`);
+    const res = await fetch(`${API}/analytics`, { credentials: 'include' });
     const data = await res.json();
     const analytics = data.analytics || {};
     const cats = { Billing:'#3b9eff', Technical:'#22d3a0', Service:'#f59e0b', General:'#a78bfa' };
@@ -1255,6 +1568,7 @@ async function submitResolution() {
     const res = await fetch(`${API}/resolve_ticket`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ ticket_id: currentTicketId, resolution_notes: resolution })
     });
     

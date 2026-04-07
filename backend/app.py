@@ -25,15 +25,17 @@ import sqlite3
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, session
 from flask_cors import CORS
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 
 from backend.classifier import classifier_instance, preprocess_text
 from backend.search_algorithms import BestFirstSearch, AStarResponseSelector, should_auto_resolve
 from backend.knowledge_base import get_responses_for_category
 from backend.database import (
     save_complaint, create_ticket, get_all_complaints,
-    get_all_tickets, get_analytics, get_connection
+    get_all_tickets, get_analytics, get_connection,
+    create_user, authenticate_user, get_user_by_id
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -41,7 +43,25 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-CORS(app)  # Allow requests from the frontend
+app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+CORS(app, supports_credentials=True)  # Allow credentials for session management
+
+# Flask-Login setup
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+class User(UserMixin):
+    def __init__(self, user_id, email):
+        self.id = user_id
+        self.email = email
+
+@login_manager.user_loader
+def load_user(user_id):
+    user_data = get_user_by_id(user_id)
+    if user_data:
+        return User(user_data['id'], user_data['email'])
+    return None
 
 DATASET_PATH = os.path.join(ROOT, "dataset", "complaints_dataset.csv")
 
@@ -55,8 +75,88 @@ def health():
     return jsonify({
         "status": "ok",
         "model_trained": classifier_instance.is_trained,
-        "service": "ResolveAI"
+        "service": "ResolveAI",
+        "authenticated": current_user.is_authenticated if current_user else False
     })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AUTHENTICATION ENDPOINTS
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.route("/auth/signup", methods=["POST"])
+def signup():
+    """Create a new user account."""
+    body = request.get_json(silent=True) or {}
+    email = (body.get("email") or "").strip().lower()
+    password = body.get("password", "").strip()
+
+    if not email or not password:
+        return jsonify({"error": "Email and password are required"}), 400
+
+    if len(password) < 6:
+        return jsonify({"error": "Password must be at least 6 characters long"}), 400
+
+    if "@" not in email or "." not in email:
+        return jsonify({"error": "Please provide a valid email address"}), 400
+
+    user_id = create_user(email, password)
+    if user_id:
+        user = User(user_id, email)
+        login_user(user)
+        return jsonify({
+            "success": True,
+            "message": "Account created successfully!",
+            "user": {"id": user_id, "email": email}
+        })
+    else:
+        return jsonify({"error": "Email already exists"}), 409
+
+
+@app.route("/auth/login", methods=["POST"])
+def login():
+    """Authenticate user and create session."""
+    body = request.get_json(silent=True) or {}
+    email = (body.get("email") or "").strip().lower()
+    password = body.get("password", "").strip()
+
+    if not email or not password:
+        return jsonify({"error": "Email and password are required"}), 400
+
+    user_id = authenticate_user(email, password)
+    if user_id:
+        user = User(user_id, email)
+        login_user(user)
+        return jsonify({
+            "success": True,
+            "message": "Login successful!",
+            "user": {"id": user_id, "email": email}
+        })
+    else:
+        return jsonify({"error": "Invalid email or password"}), 401
+
+
+@app.route("/auth/logout", methods=["POST"])
+@login_required
+def logout():
+    """End user session."""
+    logout_user()
+    return jsonify({"success": True, "message": "Logged out successfully!"})
+
+
+@app.route("/auth/status", methods=["GET"])
+def auth_status():
+    """Check current authentication status."""
+    if current_user.is_authenticated:
+        return jsonify({
+            "authenticated": True,
+            "user": {
+                "id": current_user.id,
+                "email": current_user.email
+            }
+        })
+    else:
+        return jsonify({"authenticated": False})
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -101,6 +201,7 @@ def train():
 # ─────────────────────────────────────────────────────────────────────────────
 
 @app.route("/predict", methods=["POST"])
+@login_required
 def predict():
     """
     Main endpoint: classify complaint → search for best response → resolve/ticket.
@@ -158,12 +259,14 @@ def predict():
         category=final_category,
         confidence=confidence,
         status=status,
+        user_id=current_user.id,
         response=resolution_text,
         ticket_id=ticket_id
     )
 
     if not auto_resolve:
         ticket_id = create_ticket(
+            user_id=current_user.id,
             complaint_id=complaint_id,
             complaint_text=complaint_text,
             category=final_category,
@@ -198,24 +301,28 @@ def predict():
 # ─────────────────────────────────────────────────────────────────────────────
 
 @app.route("/resolve", methods=["GET"])
+@login_required
 def resolve():
-    complaints = get_all_complaints(limit=50)
+    complaints = get_all_complaints(current_user.id, limit=50)
     return jsonify({"complaints": complaints, "total": len(complaints)})
 
 
 @app.route("/tickets", methods=["GET"])
+@login_required
 def tickets():
-    all_tickets = get_all_tickets(limit=50)
+    all_tickets = get_all_tickets(current_user.id, limit=50)
     return jsonify({"tickets": all_tickets, "total": len(all_tickets)})
 
 
 @app.route("/analytics", methods=["GET"])
+@login_required
 def analytics():
-    data = get_analytics()
+    data = get_analytics(current_user.id)
     return jsonify({"analytics": data})
 
 
 @app.route("/resolve_ticket", methods=["POST"])
+@login_required
 def resolve_ticket():
     """
     Human reviewer endpoint: mark a ticket as resolved with notes.
